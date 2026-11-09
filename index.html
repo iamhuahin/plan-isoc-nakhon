@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบแผนงาน กอ.รมน.จังหวัดนครศรีธรรมราช</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; color: #333; padding-bottom: 85px; }
+    .header-banner { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 20px 15px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .nav-pills .nav-link { color: #555; background-color: #fff; border: 1px solid #dee2e6; margin: 0 3px; font-weight: 500; border-radius: 10px; font-size: 14px; transition: all 0.2s ease; }
+    .nav-pills .nav-link.active { background-color: #1e3a8a !important; color: white !important; border-color: #1e3a8a; box-shadow: 0 4px 6px rgba(30, 58, 138, 0.2); }
+    
+    .plan-card { background: white; border: none; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px; border-left: 6px solid #3b82f6; overflow: hidden; }
+    .time-badge { background-color: #eff6ff; color: #1e40af; font-weight: 600; padding: 5px 10px; border-radius: 6px; font-size: 13px; }
+    .operator-badge { background-color: rgba(255,255,255,0.85); color: #1f2937; font-weight: 500; padding: 3px 8px; border-radius: 6px; font-size: 12px; display: inline-block; border: 1px solid rgba(0,0,0,0.08); }
+    .unit-badge { background-color: #fef3c7; color: #92400e; font-weight: 600; padding: 5px 10px; border-radius: 6px; font-size: 13px; }
+    
+    .leader-box { background-color: rgba(255, 255, 255, 0.75); border: 1px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 6px 12px; }
+    .leader-name { color: #9d174d; font-weight: 700; font-size: 14px; }
+    .leader-role { color: #be185d; font-size: 12px; }
+
+    .info-label { font-size: 12px; color: #4b5563; font-weight: 600; margin-bottom: 2px; }
+    .info-value { font-size: 14px; color: #111827; font-weight: 500; }
+    .action-title { font-size: 16px; color: #1e3a8a; font-weight: 700; line-height: 1.4; }
+    .loading-status { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; color: #666; }
+    
+    .plan-card-past { opacity: 0.45; filter: grayscale(40%); background-color: #f3f4f6 !important; border-left-color: #9ca3af !important; }
+    .plan-card-past:hover { opacity: 0.85; filter: grayscale(0%); }
+
+    .floating-btn { position: fixed; bottom: 20px; right: 20px; z-index: 1030; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border-radius: 50px; font-weight: 600; padding: 12px 22px; }
+  </style>
+</head>
+<body>
+
+<div class="header-banner text-center mb-3">
+  <h5 class="fw-bold mb-1">กอ.รมน.จังหวัดนครศรีธรรมราช</h5>
+  <p class="mb-0 small opacity-90 fw-semibold">แผนงาน สมท. และ ศปป.1</p>
+</div>
+
+<button class="btn btn-primary floating-btn d-flex align-items-center gap-2" onclick="openCreateModal()">
+  <span>➕ เพิ่มแผนงาน</span>
+</button>
+
+<div class="container-fluid px-3">
+  <ul class="nav nav-pills nav-justified mb-3" id="dayTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" id="tab-day1" data-bs-toggle="pill" data-bs-target="#panel-day1" type="button" role="tab">วันนี้</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="tab-day2" data-bs-toggle="pill" data-bs-target="#panel-day2" type="button" role="tab">วันพรุ่งนี้</button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="tab-day3" data-bs-toggle="pill" data-bs-target="#panel-day3" type="button" role="tab">มะรืนนี้</button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="planTabContent">
+    <div class="tab-pane fade show active" id="panel-day1" role="tabpanel">
+      <div id="list-day1" class="loading-status">กำลังโหลดข้อมูล...</div>
+    </div>
+    <div class="tab-pane fade" id="panel-day2" role="tabpanel">
+      <div id="list-day2" class="loading-status">กำลังโหลดข้อมูล...</div>
+    </div>
+    <div class="tab-pane fade" id="panel-day3" role="tabpanel">
+      <div id="list-day3" class="loading-status">กำลังโหลดข้อมูล...</div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid px-3 mt-3 mb-4">
+  <div class="card border-0 shadow-sm" style="border-radius: 14px;">
+    <div class="card-body p-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-dark">📅 แผนงานภาพรวม</h6>
+        <button id="togglePlanBtn" class="btn btn-sm btn-outline-primary" style="border-radius: 20px;" onclick="toggleOverviewPlan()">👁️ ดูแผนงาน</button>
+      </div>
+      <div id="overviewPlanArea" class="mt-3" style="display: none;">
+        <div id="overviewPlanBody">
+          <div class="text-center p-3 text-muted">กำลังดึงข้อมูล...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal เพิ่ม/แก้ไขข้อมูล -->
+<div class="modal fade" id="planModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-primary" id="planModalTitle">บันทึกแผนงาน</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <form id="planForm">
+          <input type="hidden" id="formRowIndex" value="">
+          <input type="hidden" id="formDateStr" value="">
+
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label small fw-bold">วัน/เดือน/ปี</label>
+              <input type="date" class="form-control" id="formDate" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">เวลา (เช่น 08:00)</label>
+              <input type="time" class="form-control" id="formTime" required>
+            </div>
+          </div>
+          
+          <div class="mb-2">
+            <label class="form-label small fw-bold">การปฏิบัติ / ภารกิจ</label>
+            <textarea class="form-control" id="formAction" rows="2" placeholder="ระบุภารกิจหรือการปฏิบัติราชการ" required></textarea>
+          </div>
+          
+          <div class="row g-2 mb-2">
+            <div class="col-6">
+              <label class="form-label small fw-bold">การแต่งกาย</label>
+              <input type="text" class="form-control" id="formDress" placeholder="ชุดจิตอาสา, ชุดพราง" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">สถานที่</label>
+              <input type="text" class="form-control" id="formPlace" placeholder="ระบุสถานที่" required>
+            </div>
+          </div>
+
+          <div class="p-2 mb-2 rounded" style="background-color: #fdf2f8; border: 1px dashed #f472b6;">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small fw-bold" style="color: #9d174d;">ชื่อประธาน</label>
+                <input type="text" class="form-control form-control-sm" id="formLeader" placeholder="ชื่อ-สกุล หรือ ยศ นามสกุล">
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-bold" style="color: #9d174d;">ตำแหน่งประธาน</label>
+                <input type="text" class="form-control form-control-sm" id="formLeaderRole" placeholder="เช่น ผวจ./ผอ.รมน.จังหวัด น.ศ.">
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-5">
+              <label class="form-label small fw-bold">หน่วยรับผิดชอบ</label>
+              <input type="text" class="form-control" id="formUnit" placeholder="กอ.รมน.ภาค 4, ศปป.1">
+            </div>
+            <div class="col-7">
+              <label class="form-label small fw-bold">ผู้ปฏิบัติ (Enter หรือจุลภาค คั่นหลายคน)</label>
+              <textarea class="form-control form-control-sm" id="formStaff" rows="2" placeholder="พิมพ์ชื่อผู้ปฏิบัติ กด Enter หรือใช้ , คั่น" required></textarea>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="submit" id="saveBtn" class="btn btn-primary fw-bold" style="border-radius: 10px;">💾 บันทึกแผนงาน</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLAu-4vFegjktlEKhkqj2_5mC8oyUi13lkEdeT67RxY4xL3I-a9P-plBHw-F0bkRdhJQ/exec';
+
+  const dayColorConfig = {
+    "จันทร์":    { bg: "#fef9c3", border: "#ca8a04", text: "#854d0e" },
+    "อังคาร":   { bg: "#fce7f3", border: "#db2777", text: "#9d174d" },
+    "พุธ":      { bg: "#dcfce7", border: "#16a34a", text: "#166534" },
+    "พฤหัสบดี": { bg: "#ffedd5", border: "#ea580c", text: "#9a3412" },
+    "ศุกร์":     { bg: "#e0f2fe", border: "#0284c7", text: "#075985" },
+    "เสาร์":     { bg: "#f3e8ff", border: "#9333ea", text: "#6b21a8" },
+    "อาทิตย์":  { bg: "#fee2e2", border: "#dc2626", text: "#991b1b" }
+  };
+
+  const thMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  let cachedDailyPlans = [];
+
+  function parseThaiDateToIso(dateText) {
+    if (!dateText) return "";
+    try {
+      const parts = dateText.trim().split(/\s+/);
+      const day = parseInt(parts[0], 10);
+      let month = -1;
+      let yearBE = 69;
+
+      if (parts.length > 1) {
+        for (let m = 0; m < thMonths.length; m++) {
+          if (parts[1].indexOf(thMonths[m]) !== -1) {
+            month = m + 1;
+            const y = parts[1].replace(thMonths[m], "").replace(".", "").trim();
+            if (y) yearBE = parseInt(y, 10);
+            break;
+          }
+        }
+      }
+
+      if (month !== -1 && !isNaN(day)) {
+        const fullBE = yearBE < 100 ? 2500 + yearBE : yearBE;
+        const yearCE = fullBE - 543;
+        const mm = String(month).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        return `${yearCE}-${mm}-${dd}`;
+      }
+    } catch (e) {}
+    return "";
+  }
+
+  window.onload = function() {
+    loadAllPlans();
+    document.getElementById('formDate').value = new Date().toISOString().split('T')[0];
+  };
+
+  function loadAllPlans() {
+    fetch(`${SCRIPT_URL}?action=getDailyPlans`)
+      .then(res => res.json())
+      .then(data => {
+        cachedDailyPlans = data || [];
+        processAndDisplayData(cachedDailyPlans);
+      })
+      .catch(err => {
+        document.getElementById('list-day1').innerHTML = '<div class="text-danger p-3 text-center">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+      });
+  }
+
+  function formatMatchDateStr(dateObj) {
+    const day = dateObj.getDate();
+    const thMonth = dateObj.toLocaleDateString('th-TH', { month: 'short' });
+    const thYear = (dateObj.getFullYear() + 543).toString().substring(2, 4);
+    return (day + " " + thMonth + thYear).replace(/\s+/g, ''); 
+  }
+
+  function formatLabelDate(dateObj) {
+    const dayNames = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+    return `วัน${dayNames[dateObj.getDay()]} ${dateObj.getDate()} ${dateObj.toLocaleDateString('th-TH', { month: 'short' })}`;
+  }
+
+  function processAndDisplayData(sheetData) {
+    const now = new Date();
+    let baseDate = new Date(now);
+    
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    if (hour > 20 || (hour === 20 && minute >= 30)) {
+      baseDate.setDate(baseDate.getDate() + 1);
+    }
+    
+    const d1 = new Date(baseDate);
+    const d2 = new Date(baseDate); d2.setDate(d2.getDate() + 1);
+    const d3 = new Date(baseDate); d3.setDate(d3.getDate() + 2);
+    
+    document.getElementById('tab-day1').innerHTML = `วันนี้<br><small style="font-size:11px;">(${formatLabelDate(d1)})</small>`;
+    document.getElementById('tab-day2').innerHTML = `พรุ่งนี้<br><small style="font-size:11px;">(${formatLabelDate(d2)})</small>`;
+    document.getElementById('tab-day3').innerHTML = `มะรืนนี้<br><small style="font-size:11px;">(${formatLabelDate(d3)})</small>`;
+    
+    const str1 = formatMatchDateStr(d1);
+    const str2 = formatMatchDateStr(d2);
+    const str3 = formatMatchDateStr(d3);
+    
+    renderDayPlan('list-day1', sheetData.filter(item => item.dateText.replace(/\s+/g, '') === str1));
+    renderDayPlan('list-day2', sheetData.filter(item => item.dateText.replace(/\s+/g, '') === str2));
+    renderDayPlan('list-day3', sheetData.filter(item => item.dateText.replace(/\s+/g, '') === str3));
+  }
+
+  function renderStaffBadges(staffStr) {
+    if (!staffStr || staffStr === "-") return '<span class="operator-badge">👤 -</span>';
+    const list = staffStr.split(/[,|\n]+/).map(s => s.trim()).filter(s => s.length > 0);
+    return list.map(name => `<span class="operator-badge mb-1 me-1">👤 ${name}</span>`).join('');
+  }
+
+  function renderDayPlan(elementId, items) {
+    const container = document.getElementById(elementId);
+    container.innerHTML = '';
+    if (items.length === 0) {
+      container.innerHTML = `<div class="text-center py-5 text-muted"><p class="mb-0 fs-6 fw-semibold">ไม่มีภารกิจปฏิบัติราชการ</p></div>`;
+      return;
+    }
+
+    items.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'card plan-card';
+      
+      const leaderHtml = (item.leader || item.leaderRole) ? `
+        <div class="leader-box mb-2">
+          <div class="leader-name">👑 ${item.leader || 'ประธาน'}</div>
+          ${item.leaderRole ? `<div class="leader-role">${item.leaderRole}</div>` : ''}
+        </div>` : '';
+
+      const unitHtml = item.unit ? `<span class="unit-badge">🏢 ${item.unit}</span>` : '';
+
+      card.innerHTML = `
+        <div class="card-body p-3">
+          <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+            <span class="time-badge">⏰ ${item.timeStr} น.</span>
+            <div>${unitHtml}</div>
+          </div>
+          
+          <div class="mb-2">
+            <div class="info-label">ภารกิจและการปฏิบัติราชการ</div>
+            <div class="action-title">${item.action}</div>
+          </div>
+
+          ${leaderHtml}
+          
+          <div class="row g-2 pt-2 border-top border-light">
+            <div class="col-6 border-end border-light">
+              <div class="info-label">📍 สถานที่ปฏิบัติงาน</div>
+              <div class="info-value small fw-semibold text-dark">${item.place}</div>
+            </div>
+            <div class="col-6 ps-2">
+              <div class="info-label">👕 การแต่งกาย</div>
+              <div class="info-value small fw-semibold text-success">${item.dress}</div>
+            </div>
+          </div>
+
+          <div class="mt-2 pt-2 border-top border-light">
+            <div class="info-label">ผู้ปฏิบัติงาน:</div>
+            <div class="d-flex flex-wrap">${renderStaffBadges(item.staff)}</div>
+          </div>
+        </div>`;
+      container.appendChild(card);
+    });
+  }
+
+  function toggleOverviewPlan() {
+    const area = document.getElementById('overviewPlanArea');
+    const btn = document.getElementById('togglePlanBtn');
+    if (area.style.display === 'none') {
+      area.style.display = 'block';
+      btn.innerText = '🙈 ซ่อนแผนงาน';
+      btn.className = 'btn btn-sm btn-secondary';
+      loadOverviewPlanData();
+    } else {
+      area.style.display = 'none';
+      btn.innerText = '👁️ ดูแผนงาน';
+      btn.className = 'btn btn-sm btn-outline-primary';
+    }
+  }
+
+  function loadOverviewPlanData() {
+    const body = document.getElementById('overviewPlanBody');
+    body.innerHTML = '<div class="text-center p-3 text-muted">กำลังดึงข้อมูล...</div>';
+
+    fetch(`${SCRIPT_URL}?action=getOverviewPlans`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data || data.length === 0) {
+          body.innerHTML = '<div class="text-center p-3 text-muted">ไม่มีข้อมูลแผนงาน</div>';
+          return;
+        }
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        let html = '<div class="row g-2">';
+        data.forEach(function(item) {
+          const colorSet = dayColorConfig[item.dayName] || { bg: "#ffffff", border: "#4b5563", text: "#111827" };
+          const isPast = item.timestamp > 0 && item.timestamp < todayStart.getTime();
+          const pastClass = isPast ? 'plan-card-past' : '';
+          const pastBadge = isPast ? '<span class="badge bg-secondary ms-1">ผ่านไปแล้ว</span>' : '';
+
+          const leaderPart = (item.leader || item.leaderRole) ? `
+            <div class="leader-box mb-2">
+              <div class="leader-name">👑 ${item.leader || 'ประธาน'}</div>
+              ${item.leaderRole ? `<div class="leader-role">${item.leaderRole}</div>` : ''}
+            </div>` : '';
+          const unitPart = item.unit ? `<span class="badge bg-white text-dark border me-1">🏢 ${item.unit}</span>` : '';
+
+          html += `
+            <div class="col-12">
+              <div class="card shadow-sm border-0 ${pastClass}" style="background-color: ${colorSet.bg}; border-left: 6px solid ${colorSet.border} !important; border-radius: 12px;">
+                <div class="card-body p-3">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <div class="fw-bold" style="font-size: 14px; color: ${colorSet.text};">
+                      📅 ${item.dayName ? 'วัน' + item.dayName + ' ' : ''}${item.dateText} | ⏰ ${item.time} น. ${pastBadge}
+                    </div>
+                    <div class="d-flex gap-1">
+                      <button class="btn btn-sm btn-dark py-0 px-2" style="font-size:11px; border-radius:6px;" onclick="openEditByIndex(${item.rowIndex})">✏️ แก้ไข</button>
+                      <button class="btn btn-sm btn-danger py-0 px-2" style="font-size:11px; border-radius:6px;" onclick="confirmDeletePlan(${item.rowIndex}, '${item.dateText}', '${item.action}')">🗑️ ลบ</button>
+                    </div>
+                  </div>
+                  
+                  <div class="fw-bold mb-2" style="font-size: 15px; color: #111827;">${item.action}</div>
+                  ${leaderPart}
+                  <div>${unitPart}</div>
+                  <div class="small fw-medium mt-1" style="color: #374151;">📍 สถานที่: ${item.place} | 👕 การแต่งกาย: ${item.dress}</div>
+                  <div class="mt-2 pt-1 border-top border-secondary border-opacity-10">
+                    <div class="d-flex flex-wrap">${renderStaffBadges(item.staff)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+        });
+        html += '</div>';
+        body.innerHTML = html;
+      })
+      .catch(err => {
+        body.innerHTML = '<div class="text-danger p-3 text-center">เกิดข้อผิดพลาดในการโหลดแผนงานภาพรวม</div>';
+      });
+  }
+
+  function confirmDeletePlan(rowIndex, dateText, action) {
+    const cleanAction = action ? action.substring(0, 30) : '';
+    if (confirm(`ยืนยันการลบแผนงานนี้หรือไม่?\n\nวันที่: ${dateText}\nภารกิจ: ${cleanAction}...`)) {
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'deletePlan', rowIndex: rowIndex })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          loadAllPlans();
+          if (document.getElementById('overviewPlanArea').style.display !== 'none') {
+            loadOverviewPlanData();
+          }
+        } else {
+          alert('ไม่สามารถลบได้: ' + res.message);
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'));
+    }
+  }
+
+  function openCreateModal() {
+    document.getElementById('planForm').reset();
+    document.getElementById('formRowIndex').value = '';
+    document.getElementById('formDateStr').value = '';
+    document.getElementById('planModalTitle').innerText = 'บันทึกแผนงานใหม่';
+    document.getElementById('formDate').value = new Date().toISOString().split('T')[0];
+    new bootstrap.Modal(document.getElementById('planModal')).show();
+  }
+
+  function openEditByIndex(rowIndex) {
+    const item = cachedDailyPlans.find(x => x.rowIndex === rowIndex);
+    if (!item) {
+      fetch(`${SCRIPT_URL}?action=getDailyPlans`)
+        .then(res => res.json())
+        .then(list => {
+          cachedDailyPlans = list || [];
+          const found = cachedDailyPlans.find(x => x.rowIndex === rowIndex);
+          if (found) populateEditForm(found);
+        });
+    } else {
+      populateEditForm(item);
+    }
+  }
+
+  function populateEditForm(item) {
+    document.getElementById('formRowIndex').value = item.rowIndex;
+    document.getElementById('formDateStr').value = item.dateText;
+    
+    const isoDate = parseThaiDateToIso(item.dateText);
+    if (isoDate) {
+      document.getElementById('formDate').value = isoDate;
+    }
+
+    document.getElementById('formTime').value = item.timeStr;
+    document.getElementById('formAction').value = item.action;
+    document.getElementById('formDress').value = item.dress;
+    document.getElementById('formPlace').value = item.place;
+    document.getElementById('formLeader').value = item.leader;
+    document.getElementById('formLeaderRole').value = item.leaderRole;
+    document.getElementById('formUnit').value = item.unit;
+    document.getElementById('formStaff').value = item.staff;
+
+    document.getElementById('planModalTitle').innerText = 'แก้ไขแผนงาน (' + item.dateText + ')';
+    new bootstrap.Modal(document.getElementById('planModal')).show();
+  }
+
+  document.getElementById('planForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.innerText = '⏳ กำลังบันทึกข้อมูล...';
+
+    const rowIndex = document.getElementById('formRowIndex').value;
+    const payload = {
+      action: rowIndex ? 'updatePlan' : 'addPlan',
+      data: {
+        rowIndex: rowIndex,
+        date: document.getElementById('formDate').value,
+        dateStr: document.getElementById('formDateStr').value,
+        time: document.getElementById('formTime').value,
+        action: document.getElementById('formAction').value,
+        dress: document.getElementById('formDress').value,
+        place: document.getElementById('formPlace').value,
+        leader: document.getElementById('formLeader').value,
+        leaderRole: document.getElementById('formLeaderRole').value,
+        unit: document.getElementById('formUnit').value,
+        staff: document.getElementById('formStaff').value
+      }
+    };
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      saveBtn.disabled = false;
+      saveBtn.innerText = '💾 บันทึกแผนงาน';
+      if (res.success) {
+        bootstrap.Modal.getInstance(document.getElementById('planModal')).hide();
+        loadAllPlans();
+        if (document.getElementById('overviewPlanArea').style.display !== 'none') {
+          loadOverviewPlanData();
+        }
+      } else {
+        alert('เกิดข้อผิดพลาด: ' + res.message);
+      }
+    })
+    .catch(err => {
+      saveBtn.disabled = false;
+      saveBtn.innerText = '💾 บันทึกแผนงาน';
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+    });
+  });
+</script>
+</body>
+</html>
