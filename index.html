@@ -8,7 +8,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; color: #333; padding-bottom: 85px; }
-    .header-banner { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 20px 15px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .header-banner { position: relative; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 20px 15px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .settings-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: background 0.2s; }
+    .settings-btn:hover { background: rgba(255,255,255,0.35); }
+    
     .nav-pills .nav-link { color: #555; background-color: #fff; border: 1px solid #dee2e6; margin: 0 3px; font-weight: 500; border-radius: 10px; font-size: 14px; transition: all 0.2s ease; }
     .nav-pills .nav-link.active { background-color: #1e3a8a !important; color: white !important; border-color: #1e3a8a; box-shadow: 0 4px 6px rgba(30, 58, 138, 0.2); }
     
@@ -35,6 +38,7 @@
 <body>
 
 <div class="header-banner text-center mb-3">
+  <button class="settings-btn" onclick="openApiConfigModal()" title="ตั้งค่าลิงก์ Web App">⚙️</button>
   <h5 class="fw-bold mb-1">กอ.รมน.จังหวัดนครศรีธรรมราช</h5>
   <p class="mb-0 small opacity-90 fw-semibold">แผนงาน สมท. และ ศปป.1</p>
 </div>
@@ -158,9 +162,52 @@
   </div>
 </div>
 
+<!-- Modal ตั้งค่า Web App URL -->
+<div class="modal fade" id="apiConfigModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-dark">⚙️ ตั้งค่าลิงก์เชื่อมต่อข้อมูล (Web App URL)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">หากกด Deploy ใหม่แล้วรหัสลิงก์เปลี่ยน ให้คัดลอกลิงก์ Web App (ที่ลงท้ายด้วย <code>/exec</code>) มาวางที่นี่:</p>
+        <input type="url" class="form-control mb-3" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+        <div class="d-grid">
+          <button type="button" class="btn btn-success fw-bold" onclick="saveApiConfig()">✅ บันทึกและโหลดข้อมูลใหม่</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLAu-4vFegjktlEKhkqj2_5mC8oyUi13lkEdeT67RxY4xL3I-a9P-plBHw-F0bkRdhJQ/exec';
+  // ลิงก์ตั้งต้น (หากท่านมีลิงก์ใหม่ที่ได้จากปุ่มคัดลอก สามารถวางทับในเครื่องหมาย '...' ด้านล่างนี้ หรือกดปุ่ม ⚙️ บนหน้าเว็บเพื่อเปลี่ยนได้เลย)
+  const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLAu-4vFegjktlEKhkqj2_5mC8oyUi13lkEdeT67RxY4xL3I-a9P-plBHw-F0bkRdhJQ/exec';
+
+  function getScriptUrl() {
+    return localStorage.getItem('ISOC_SCRIPT_URL') || DEFAULT_SCRIPT_URL;
+  }
+
+  function openApiConfigModal() {
+    document.getElementById('inputScriptUrl').value = getScriptUrl();
+    new bootstrap.Modal(document.getElementById('apiConfigModal')).show();
+  }
+
+  function saveApiConfig() {
+    const val = document.getElementById('inputScriptUrl').value.trim();
+    if (!val || !val.startsWith('https://script.google.com/')) {
+      alert('กรุณาวางลิงก์ Web App จาก Google Apps Script ที่ถูกต้อง');
+      return;
+    }
+    localStorage.setItem('ISOC_SCRIPT_URL', val);
+    bootstrap.Modal.getInstance(document.getElementById('apiConfigModal')).hide();
+    loadAllPlans();
+    if (document.getElementById('overviewPlanArea').style.display !== 'none') {
+      loadOverviewPlanData();
+    }
+  }
 
   const dayColorConfig = {
     "จันทร์":    { bg: "#fef9c3", border: "#ca8a04", text: "#854d0e" },
@@ -206,19 +253,51 @@
   }
 
   window.onload = function() {
+    updateTabDates();
     loadAllPlans();
     document.getElementById('formDate').value = new Date().toISOString().split('T')[0];
   };
 
+  function getBaseDate() {
+    const now = new Date();
+    let baseDate = new Date(now);
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    if (hour > 20 || (hour === 20 && minute >= 30)) {
+      baseDate.setDate(baseDate.getDate() + 1);
+    }
+    return baseDate;
+  }
+
+  function updateTabDates() {
+    const baseDate = getBaseDate();
+    const d1 = new Date(baseDate);
+    const d2 = new Date(baseDate); d2.setDate(d2.getDate() + 1);
+    const d3 = new Date(baseDate); d3.setDate(d3.getDate() + 2);
+    
+    document.getElementById('tab-day1').innerHTML = `วันนี้<br><small style="font-size:11px;">(${formatLabelDate(d1)})</small>`;
+    document.getElementById('tab-day2').innerHTML = `พรุ่งนี้<br><small style="font-size:11px;">(${formatLabelDate(d2)})</small>`;
+    document.getElementById('tab-day3').innerHTML = `มะรืนนี้<br><small style="font-size:11px;">(${formatLabelDate(d3)})</small>`;
+  }
+
   function loadAllPlans() {
-    fetch(`${SCRIPT_URL}?action=getDailyPlans`)
+    document.getElementById('list-day1').innerHTML = '<div class="loading-status">กำลังโหลดข้อมูล...</div>';
+    fetch(`${getScriptUrl()}?action=getDailyPlans`, { redirect: 'follow' })
       .then(res => res.json())
       .then(data => {
-        cachedDailyPlans = data || [];
+        cachedDailyPlans = Array.isArray(data) ? data : [];
         processAndDisplayData(cachedDailyPlans);
       })
       .catch(err => {
-        document.getElementById('list-day1').innerHTML = '<div class="text-danger p-3 text-center">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+        const errorHtml = `
+          <div class="text-center p-4">
+            <div class="text-danger fw-bold mb-2">⚠️ เชื่อมต่อข้อมูลไม่สำเร็จ (ลิงก์ Web App อาจเปลี่ยนใหม่)</div>
+            <p class="small text-muted mb-3">กรุณากดปุ่มตั้งค่าด้านล่าง เพื่อวางลิงก์ Web App ตัวใหม่ที่ได้จากการ Deploy</p>
+            <button class="btn btn-sm btn-primary px-3 rounded-pill" onclick="openApiConfigModal()">⚙️ ตั้งค่าลิงก์ Web App ใหม่</button>
+          </div>`;
+        document.getElementById('list-day1').innerHTML = errorHtml;
+        document.getElementById('list-day2').innerHTML = errorHtml;
+        document.getElementById('list-day3').innerHTML = errorHtml;
       });
   }
 
@@ -235,30 +314,18 @@
   }
 
   function processAndDisplayData(sheetData) {
-    const now = new Date();
-    let baseDate = new Date(now);
-    
-    const hour = now.getHours();
-    const minute = now.getMinutes();
-    if (hour > 20 || (hour === 20 && minute >= 30)) {
-      baseDate.setDate(baseDate.getDate() + 1);
-    }
-    
+    const baseDate = getBaseDate();
     const d1 = new Date(baseDate);
     const d2 = new Date(baseDate); d2.setDate(d2.getDate() + 1);
     const d3 = new Date(baseDate); d3.setDate(d3.getDate() + 2);
-    
-    document.getElementById('tab-day1').innerHTML = `วันนี้<br><small style="font-size:11px;">(${formatLabelDate(d1)})</small>`;
-    document.getElementById('tab-day2').innerHTML = `พรุ่งนี้<br><small style="font-size:11px;">(${formatLabelDate(d2)})</small>`;
-    document.getElementById('tab-day3').innerHTML = `มะรืนนี้<br><small style="font-size:11px;">(${formatLabelDate(d3)})</small>`;
     
     const str1 = formatMatchDateStr(d1);
     const str2 = formatMatchDateStr(d2);
     const str3 = formatMatchDateStr(d3);
     
-    renderDayPlan('list-day1', sheetData.filter(item => item.dateText.replace(/\s+/g, '') === str1));
-    renderDayPlan('list-day2', sheetData.filter(item => item.dateText.replace(/\s+/g, '') === str2));
-    renderDayPlan('list-day3', sheetData.filter(item => item.dateText.replace(/\s+/g, '') === str3));
+    renderDayPlan('list-day1', sheetData.filter(item => String(item.dateText).replace(/\s+/g, '') === str1));
+    renderDayPlan('list-day2', sheetData.filter(item => String(item.dateText).replace(/\s+/g, '') === str2));
+    renderDayPlan('list-day3', sheetData.filter(item => String(item.dateText).replace(/\s+/g, '') === str3));
   }
 
   function renderStaffBadges(staffStr) {
@@ -340,7 +407,7 @@
     const body = document.getElementById('overviewPlanBody');
     body.innerHTML = '<div class="text-center p-3 text-muted">กำลังดึงข้อมูล...</div>';
 
-    fetch(`${SCRIPT_URL}?action=getOverviewPlans`)
+    fetch(`${getScriptUrl()}?action=getOverviewPlans`, { redirect: 'follow' })
       .then(res => res.json())
       .then(data => {
         if (!data || data.length === 0) {
@@ -394,14 +461,18 @@
         body.innerHTML = html;
       })
       .catch(err => {
-        body.innerHTML = '<div class="text-danger p-3 text-center">เกิดข้อผิดพลาดในการโหลดแผนงานภาพรวม</div>';
+        body.innerHTML = `
+          <div class="text-center p-3">
+            <div class="text-danger mb-2">เกิดข้อผิดพลาดในการโหลดแผนงานภาพรวม</div>
+            <button class="btn btn-sm btn-outline-primary rounded-pill" onclick="openApiConfigModal()">⚙️ ตรวจสอบลิงก์ Web App</button>
+          </div>`;
       });
   }
 
   function confirmDeletePlan(rowIndex, dateText, action) {
     const cleanAction = action ? action.substring(0, 30) : '';
     if (confirm(`ยืนยันการลบแผนงานนี้หรือไม่?\n\nวันที่: ${dateText}\nภารกิจ: ${cleanAction}...`)) {
-      fetch(SCRIPT_URL, {
+      fetch(getScriptUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'deletePlan', rowIndex: rowIndex })
@@ -433,10 +504,10 @@
   function openEditByIndex(rowIndex) {
     const item = cachedDailyPlans.find(x => x.rowIndex === rowIndex);
     if (!item) {
-      fetch(`${SCRIPT_URL}?action=getDailyPlans`)
+      fetch(`${getScriptUrl()}?action=getDailyPlans`, { redirect: 'follow' })
         .then(res => res.json())
         .then(list => {
-          cachedDailyPlans = list || [];
+          cachedDailyPlans = Array.isArray(list) ? list : [];
           const found = cachedDailyPlans.find(x => x.rowIndex === rowIndex);
           if (found) populateEditForm(found);
         });
@@ -491,7 +562,7 @@
       }
     };
 
-    fetch(SCRIPT_URL, {
+    fetch(getScriptUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
